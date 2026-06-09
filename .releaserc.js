@@ -43,7 +43,7 @@ module.exports = {
     [
       "@semantic-release/exec",
       {
-        prepareCmd: "node -e \"const fs=require('fs');let md=fs.readFileSync('CHANGELOG.md','utf8');md=md.replace(/^(\\* .+?\\]\\([^)]+\\)\\))(?:,? ?closes? )?\\[#(\\d+)\\]\\([^)]*\\)/gm,(m,p,id)=>p.trim()+'\\n\\n* Work Item: [#'+id+'](https://dev.azure.com/denishaxhija5/Semantic-Release-Test/_workitems/edit/'+id+')');fs.writeFileSync('CHANGELOG.md',md);\" && echo ${nextRelease.version} > VERSION && mkdir -p dist && tar -czf dist/app-${nextRelease.version}.tar.gz src/ VERSION",
+        prepareCmd: "node -e \"const fs=require('fs');let md=fs.readFileSync('CHANGELOG.md','utf8');md=md.replace(/^(\\* .*)\\[#(\\d+)\\]\\([^)]+\\)\\s*$/gm,function(m,p,id){var c=p.replace(/,?\\s*closes?\\s*/,'').trim();return c+'\\n\\n* Work Item: [#'+id+'](https://dev.azure.com/denishaxhija5/Semantic-Release-Test/_workitems/edit/'+id+')';});fs.writeFileSync('CHANGELOG.md',md);\" && echo ${nextRelease.version} > VERSION && mkdir -p dist && tar -czf dist/app-${nextRelease.version}.tar.gz src/ VERSION",
         publishCmd: "echo 'Artifact ready: dist/app-${nextRelease.version}.tar.gz'"
       }
     ],
