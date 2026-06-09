@@ -30,7 +30,24 @@ module.exports = {
           issuePrefixes: ["#"]
         },
         writerOpts: {
-          commitsSort: ["subject", "scope"]
+          commitsSort: ["subject", "scope"],
+          commitPartial:
+            `*{{#if scope}} **{{scope}}:**\n` +
+            `{{~/if}} {{#if subject}}\n` +
+            `  {{~subject}}\n` +
+            `{{~else}}\n` +
+            `  {{~header}}\n` +
+            `{{~/if}}\n` +
+            `{{~!-- commit link --}} {{#if @root.linkReferences~}}\n` +
+            `  ([{{shortHash}}]({{@root.host}}/{{@root.owner}}/{{@root.repository}}/commit/{{hash}}))\n` +
+            `{{~else}}\n` +
+            `  {{~shortHash}}\n` +
+            `{{~/if}}\n` +
+            `{{~#if references}}\n` +
+            `{{#each references}}\n` +
+            `  * **Work Item:** [#{{issue}}](https://dev.azure.com/denishaxhija5/Semantic-Release-Test/_workitems/edit/{{issue}})\n` +
+            `{{/each}}\n` +
+            `{{~/if}}\n`
         }
       }
     ],
@@ -43,7 +60,7 @@ module.exports = {
     [
       "@semantic-release/exec",
       {
-        prepareCmd: "sed -i 's|/_git/[^/]*/issues/|/_workitems/edit/|g' CHANGELOG.md && echo ${nextRelease.version} > VERSION && mkdir -p dist && tar -czf dist/app-${nextRelease.version}.tar.gz src/ VERSION",
+        prepareCmd: "echo ${nextRelease.version} > VERSION && mkdir -p dist && tar -czf dist/app-${nextRelease.version}.tar.gz src/ VERSION",
         publishCmd: "echo 'Artifact ready: dist/app-${nextRelease.version}.tar.gz'"
       }
     ],
