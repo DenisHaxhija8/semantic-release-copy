@@ -1,5 +1,3 @@
-const WORK_ITEM_BASE = "https://dev.azure.com/denishaxhija5/Semantic-Release-Test/_workitems/edit/";
-
 module.exports = {
   branches: ["main"],
   tagFormat: "v${version}",
@@ -32,17 +30,7 @@ module.exports = {
           issuePrefixes: ["#"]
         },
         writerOpts: {
-          commitsSort: ["subject", "scope"],
-          finalizeContext: (ctx) => {
-            ctx.commitGroups.forEach(group => {
-              group.commits.forEach(commit => {
-                (commit.references || []).forEach(ref => {
-                  ref.url = WORK_ITEM_BASE + ref.issue;
-                });
-              });
-            });
-            return ctx;
-          }
+          commitsSort: ["subject", "scope"]
         }
       }
     ],
@@ -55,7 +43,7 @@ module.exports = {
     [
       "@semantic-release/exec",
       {
-        prepareCmd: "echo ${nextRelease.version} > VERSION && mkdir -p dist && tar -czf dist/app-${nextRelease.version}.tar.gz src/ VERSION",
+        prepareCmd: "sed -i 's|/_git/[^/]*/issues/|/_workitems/edit/|g' CHANGELOG.md && echo ${nextRelease.version} > VERSION && mkdir -p dist && tar -czf dist/app-${nextRelease.version}.tar.gz src/ VERSION",
         publishCmd: "echo 'Artifact ready: dist/app-${nextRelease.version}.tar.gz'"
       }
     ],
