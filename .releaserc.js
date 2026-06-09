@@ -43,7 +43,7 @@ module.exports = {
     [
       "@semantic-release/exec",
       {
-        prepareCmd: "node -e \"const fs=require('fs');let md=fs.readFileSync('CHANGELOG.md','utf8');md=md.replace(/^(\\* .*)\\[#(\\d+)\\]\\([^)]+\\)\\s*$/gm,function(m,p,id){var c=p.replace(/,?\\s*closes?\\s*/,'').trim();return c+'\\n\\n* Work Item: [#'+id+'](https://dev.azure.com/denishaxhija5/Semantic-Release-Test/_workitems/edit/'+id+')';});fs.writeFileSync('CHANGELOG.md',md);\" && echo ${nextRelease.version} > VERSION && mkdir -p dist && tar -czf dist/app-${nextRelease.version}.tar.gz src/ VERSION",
+        prepareCmd: "node -e \"const fs=require('fs');const BASE='https://dev.azure.com/denishaxhija5/Semantic-Release-Test/_workitems/edit/';let md=fs.readFileSync('CHANGELOG.md','utf8');const lines=md.split('\\n');const result=[];for(let i=0;i<lines.length;i++){const l=lines[i];const ref=l.match(/\\[#(\\d+)\\]\\([^)]+\\)/);if(l.startsWith('* ')&&ref){const id=ref[1];const clean=l.replace(/\\s*\\[#\\d+\\]\\([^)]+\\)/,' ').trim();result.push(clean);result.push('');result.push('* Work Item: [#'+id+']('+BASE+id+')');}else{result.push(l);}}fs.writeFileSync('CHANGELOG.md',result.join('\\n'));\" && echo ${nextRelease.version} > VERSION && mkdir -p dist && tar -czf dist/app-${nextRelease.version}.tar.gz src/ VERSION",
         publishCmd: "echo 'Artifact ready: dist/app-${nextRelease.version}.tar.gz'"
       }
     ],
