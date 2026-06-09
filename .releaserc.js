@@ -30,24 +30,7 @@ module.exports = {
           issuePrefixes: ["#"]
         },
         writerOpts: {
-          commitsSort: ["subject", "scope"],
-          commitPartial:
-            `*{{#if scope}} **{{scope}}:**\n` +
-            `{{~/if}} {{#if subject}}\n` +
-            `  {{~subject}}\n` +
-            `{{~else}}\n` +
-            `  {{~header}}\n` +
-            `{{~/if}}\n` +
-            `{{~!-- commit link --}} {{#if @root.linkReferences~}}\n` +
-            `  ([{{shortHash}}]({{@root.host}}/{{@root.owner}}/{{@root.repository}}/commit/{{hash}}))\n` +
-            `{{~else}}\n` +
-            `  {{~shortHash}}\n` +
-            `{{~/if}}\n` +
-            `{{~#if references}}\n` +
-            `{{#each references}}\n` +
-            `  * **Work Item:** [#{{issue}}](https://dev.azure.com/denishaxhija5/Semantic-Release-Test/_workitems/edit/{{issue}})\n` +
-            `{{/each}}\n` +
-            `{{~/if}}\n`
+          commitsSort: ["subject", "scope"]
         }
       }
     ],
@@ -60,7 +43,7 @@ module.exports = {
     [
       "@semantic-release/exec",
       {
-        prepareCmd: "echo ${nextRelease.version} > VERSION && mkdir -p dist && tar -czf dist/app-${nextRelease.version}.tar.gz src/ VERSION",
+        prepareCmd: "node -e \"const fs=require('fs');let md=fs.readFileSync('CHANGELOG.md','utf8');md=md.replace(/^(\\* .+?)(?:,? ?closes? )?\\[#(\\d+)\\]\\([^)]*\\)/gm,(m,p,id)=>p.trim()+'\\n  * **Work Item:** [#'+id+'](https://dev.azure.com/denishaxhija5/Semantic-Release-Test/_workitems/edit/'+id+')');fs.writeFileSync('CHANGELOG.md',md);\" && echo ${nextRelease.version} > VERSION && mkdir -p dist && tar -czf dist/app-${nextRelease.version}.tar.gz src/ VERSION",
         publishCmd: "echo 'Artifact ready: dist/app-${nextRelease.version}.tar.gz'"
       }
     ],
