@@ -61,7 +61,7 @@ stages:
 
           - script: |
               if [ "$(Build.Reason)" = "PullRequest" ]; then
-                npx commitlint --from "$(Build.SourceVersion)~1" --to "$(Build.SourceVersion)" --verbose
+                npx commitlint --from "$(System.PullRequest.SourceCommitId)~1" --to "$(System.PullRequest.SourceCommitId)" --verbose
               else
                 npx commitlint --last --verbose
               fi
