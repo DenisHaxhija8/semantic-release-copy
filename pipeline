@@ -1,148 +1,58 @@
-trigger:
-  branches:
-    include:
-      - main
-      - feature/*
-
-pr:
-  branches:
-    include:
-      - main
-
-pool:
-  vmImage: ubuntu-latest
-
-variables:
-  NODE_VERSION: '20.x'
-
-  # Path to the actual Node.js app
-  # Change this to wherever your package.json exists
-  APP_DIR: '.'
-
-# ─────────────────────────────────────────────────────────────
-# Stage 1 — Build (runs on every branch)
-# ─────────────────────────────────────────────────────────────
-stages:
-  - stage: Build
-    displayName: Build & Verify
-    jobs:
-      - job: Build
-        displayName: Install & Test
-
-        steps:
-          - checkout: self
-            fetchDepth: 0
-            persistCredentials: true
-
-          - task: NodeTool@0
-            displayName: Use Node.js $(NODE_VERSION)
-            inputs:
-              versionSpec: $(NODE_VERSION)
-
-          # Optional debug step
-          - script: |
-              echo "Current directory:"
-              pwd
-
-              echo ""
-              echo "Repository structure:"
-              ls -la
-
-              echo ""
-              echo "Searching for package.json files:"
-              find . -name package.json
-            displayName: Debug repository structure
-
-          - script: npm ci
-            displayName: Install dependencies
-            workingDirectory: $(APP_DIR)
-            env:
-              HUSKY: '0'
-
-          - script: |
-              if [ "$(Build.Reason)" = "PullRequest" ]; then
-                npx commitlint --from "$(System.PullRequest.SourceCommitId)~1" --to "$(System.PullRequest.SourceCommitId)" --verbose
-              else
-                npx commitlint --last --verbose
-              fi
-            displayName: Lint commit messages (commitlint)
-            workingDirectory: $(APP_DIR)
-            env:
-              HUSKY: '0'
-
-          - script: npm test
-            displayName: Run app smoke test
-            workingDirectory: $(APP_DIR)
-
-          - script: |
-              echo "Branch : $(Build.SourceBranchName)"
-              echo "Commit : $(Build.SourceVersion)"
-              echo "Trigger: $(Build.Reason)"
-            displayName: Print build context
-
-  # ─────────────────────────────────────────────────────────────
-  # Stage 2 — Release (main branch only)
-  # ─────────────────────────────────────────────────────────────
-  - stage: Release
-    displayName: Semantic Release
-    dependsOn: Build
-
-    condition: |
-      and(
-        succeeded(),
-        eq(variables['Build.SourceBranch'], 'refs/heads/main'),
-        ne(variables['Build.Reason'], 'PullRequest')
-      )
-
-    jobs:
-      - job: Release
-        displayName: Run semantic-release
-
-        steps:
-          - checkout: self
-            fetchDepth: 0
-            persistCredentials: true
-
-          - task: NodeTool@0
-            displayName: Use Node.js $(NODE_VERSION)
-            inputs:
-              versionSpec: $(NODE_VERSION)
-
-          - script: npm ci
-            displayName: Install dependencies
-            workingDirectory: $(APP_DIR)
-            env:
-              HUSKY: '0'
-
-          - script: npm test
-            displayName: Run tests
-            workingDirectory: $(APP_DIR)
-
-          - script: |
-              git config user.email "ci@devops.local"
-              git config user.name "Azure DevOps CI"
-              git config --unset-all http.https://dev.azure.com/.extraheader || true
-              git remote set-url origin "https://x-token-auth:${SYSTEM_ACCESSTOKEN}@dev.azure.com/denishaxhija5/Semantic-Release-Test/_git/Semantic-Release-Test"
-            displayName: Configure git identity and credentials
-            env:
-              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-
-          - script: npx semantic-release
-            displayName: Run semantic-release
-            workingDirectory: $(APP_DIR)
-            env:
-              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-              CI: true
-              GIT_AUTHOR_NAME: Azure DevOps CI
-              GIT_AUTHOR_EMAIL: ci@devops.local
-              GIT_COMMITTER_NAME: Azure DevOps CI
-              GIT_COMMITTER_EMAIL: ci@devops.local
-
-          - task: PublishPipelineArtifact@1
-            displayName: Publish build artifact
-            condition: and(succeeded(), eq(variables['semanticRelease.new_release_published'], 'true'))
-
-            inputs:
-              targetPath: $(APP_DIR)/dist/
-              artifact: release-artifact
-              publishLocation: pipeline
+module.exports = {
+  branches: ["main"],
+  tagFormat: "v${version}",
+  plugins: [
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        preset: "angular",
+        releaseRules: [
+          { type: "feat",     release: "minor"  },
+          { type: "fix",      release: "patch"  },
+          { type: "perf",     release: "patch"  },
+          { type: "refactor", release: "patch"  },
+          { type: "docs",     release: false    },
+          { type: "chore",    release: false    },
+          { type: "style",    release: false    },
+          { type: "test",     release: false    }
+        ],
+        parserOpts: {
+          noteKeywords: ["BREAKING CHANGE", "BREAKING CHANGES", "BREAKING"]
+        }
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        preset: "angular",
+        parserOpts: {
+          noteKeywords: ["BREAKING CHANGE", "BREAKING CHANGES", "BREAKING"],
+          issuePrefixes: ["#"]
+        },
+        writerOpts: {
+          commitsSort: ["subject", "scope"]
+        }
+      }
+    ],
+    [
+      "@semantic-release/changelog",
+      {
+        changelogFile: "CHANGELOG.md"
+      }
+    ],
+    [
+      "@semantic-release/exec",
+      {
+        prepareCmd: "node -e \"const fs=require('fs');const BASE='https://dev.azure.com/denishaxhija5/Semantic-Release-Test/_workitems/edit/';let md=fs.readFileSync('CHANGELOG.md','utf8');const lines=md.split('\\n');const result=[];const items=[];for(let i=0;i<lines.length;i++){const l=lines[i];const ref=l.match(/\\[#(\\d+)\\]\\([^)]+\\)/);if(l.startsWith('* ')&&ref){items.push(ref[1]);result.push(l.replace(/\\[#\\d+\\]\\([^)]+\\)/,'[#'+ref[1]+']('+BASE+ref[1]+')'));}else{result.push(l);}}let ins=result.length;let c=0;for(let i=0;i<result.length;i++){if(result[i].startsWith('## ')){c++;if(c===2){ins=i;break;}}}if(items.length){const unique=items.filter(function(id,i){return items.indexOf(id)===i;});const sec=['','### *Please see the Work Items related to the commits below*',''].concat(unique.map(function(id){return '* [#'+id+']('+BASE+id+')';}));Array.prototype.splice.apply(result,[ins,0].concat(sec));}fs.writeFileSync('CHANGELOG.md',result.join('\\n'));\" && echo ${nextRelease.version} > VERSION && mkdir -p dist && tar -czf dist/app-${nextRelease.version}.tar.gz src/ VERSION",
+        publishCmd: "echo 'Artifact ready: dist/app-${nextRelease.version}.tar.gz'"
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        assets: ["CHANGELOG.md", "VERSION"],
+        message: "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+      }
+    ]
+  ]
+};
