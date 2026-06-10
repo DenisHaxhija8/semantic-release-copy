@@ -61,8 +61,7 @@ stages:
 
           - script: |
               if [ "$(Build.Reason)" = "PullRequest" ]; then
-                git fetch origin $(System.PullRequest.TargetBranchName)
-                npx commitlint --from "origin/$(System.PullRequest.TargetBranchName)" --to HEAD --verbose
+                npx commitlint --from "$(Build.SourceVersion)~1" --to "$(Build.SourceVersion)" --verbose
               else
                 npx commitlint --last --verbose
               fi
